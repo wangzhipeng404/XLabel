@@ -83,3 +83,14 @@ export function isInPolygon(checkPoint: Point, polygonPoints: List<Point>): bool
       return true;
   }
 }
+
+export function getDistance(p1: Point, p2: Point): number {
+  const dx = Math.abs(p2.x - p1.x)
+  const dy = Math.abs(p2.y - p1.y)
+  return Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2))
+}
+
+export function closeEnough(p1: Point, p2: Point, errorRange: number = 1): boolean {
+  const dis = getDistance(p1, p2)
+  return dis < errorRange
+}

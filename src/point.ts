@@ -7,7 +7,13 @@ export class Point {
     this.x = x
     this.y = y
   }
-  draw (painter: Svg) {
-    
+
+  paint (canvas: Svg) {
+    const $point  = canvas.circle(5).attr({
+      cx: this.x,
+      cy: this.y,
+      fill: `rgba(0, 204, 51, 0.8)`,
+      class: 'vertex',
+    })
   }
 }

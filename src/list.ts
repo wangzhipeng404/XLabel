@@ -76,6 +76,10 @@ export class List<T> {
   all(): Array<T> {
     return this.items;
   }
+  last() {
+    if (this.length() === 0) return null;
+    return this.get(this.length() - 1)
+  }
   foreach(callback: (i: number, item: T) => any) {
     var len = this.items.length;
     for (var i = 0; i < len; i++) {
