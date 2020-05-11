@@ -1,4 +1,4 @@
-import { SVG, Svg, Dom } from '@svgdotjs/svg.js'
+import { SVG, Svg, Dom, Image } from '@svgdotjs/svg.js'
 import defaultConfig from './config/config'
 import { HashTable } from './hashTable'
 import { Shape, ShapeType } from './shape'
@@ -21,7 +21,7 @@ interface MouseEV extends MouseEvent {
   dataset: Dataset
 }
 
-export class Canvas {
+export class XLabel {
   private canvas: Svg
   private cursor: Point
   private continuousMode: boolean = false
@@ -30,24 +30,40 @@ export class Canvas {
   shapes: HashTable<Shape>
   createMode: ShapeType = 'rectangle'
   mode: 'CREATE'  | 'EDIT' | 'MOVE' = 'CREATE'
+  mousePressed: boolean = false
   current?: Shape = null
   prevPoint?: Point = null
   prevMovePoint?: Point = null
   line: Shape
+  canvasWidth: number = 0
+  canvasHeight: number = 0
   offsetLeft: number = 0
   offsetTop: number = 0
+  originPoint: Point
   scale: number = 1
   selectedDataset: Dataset = {}
+  labelImagePath?: string = null
+  labelImage?: Image = null
+  labelImageWidth: number = 0
+  labelImageHeight: number = 0
+  pixmapWidth: number = 0
+  pixmapHeight: number = 0
 
-  constructor($parent: HTMLElement, conf: Partial<Config> = {}) {
+  constructor($parent: HTMLElement = document.body, conf: Partial<Config> = {}) {
     this.config = { ...defaultConfig, ...conf }
-    this.canvas = SVG().addTo($parent).size('100%', '100%')
+    this.canvas = SVG().addTo($parent).size('100%', '100%').id('xlabelsvg')
     this.shapes = new HashTable<Shape>()
     this.line = new Shape(getUniqueColorKey(this.shapes), this.createMode)
+    this.originPoint = new Point(0, 0)
+    this.canvasWidth = $parent.clientWidth
+    this.canvasHeight = $parent.clientHeight
     this.offsetLeft = $parent.offsetLeft
     this.offsetTop = $parent.offsetTop
+    this.pixmapWidth = this.canvasWidth
+    this.pixmapHeight = this.canvasHeight
     this.canvas.mousedown((e) => this.mousePressEvent(e))
     this.canvas.mousemove((e) => this.mouseMoveEvent(e))
+    this.canvas.mouseup(e => this.mouseUpEvent(e))
     this.canvas.dblclick(() => {
       console.log('dbclick')
       this.continuousMode = !this.continuousMode
@@ -55,6 +71,12 @@ export class Canvas {
     $parent.oncontextmenu = (ev: MouseEvent) => {
       ev.preventDefault()
     }
+    $parent.addEventListener('mousewheel', (e: MouseWheelEvent & MouseEV) => {
+      if (e.ctrlKey) {
+        this.zoom(e.deltaY, this.transformPos(e))
+        e.returnValue = false
+      }
+    }, { passive: false })
   }
 
   drawing() {
@@ -77,10 +99,26 @@ export class Canvas {
     this.continuousMode = flag
   }
 
-  setImg(url: string) {
-    this.canvas.clear()
+  setImg(path: string) {
+    this.labelImagePath = path
     this.shapes = new HashTable<Shape>()
-    this.canvas.image(url).size('100%', '100%')
+    const img = document.createElement('img')
+    img.src = path
+    if(img.complete){
+      this.labelImageWidth = img.width
+      this.labelImageHeight = img.height
+      this.pixmapWidth = this.canvasWidth
+      this.pixmapHeight = this.canvasWidth / img.width * img.height
+      this.reRender()
+    }else{
+      img.onload = () => {
+        this.labelImageWidth = img.width
+        this.labelImageHeight = img.height
+        this.pixmapWidth = this.canvasWidth
+        this.pixmapHeight = this.canvasWidth / img.width * img.height
+        this.reRender()
+      }
+    }
   }
 
   setConfig(conf: Partial<Config>) {
@@ -99,15 +137,31 @@ export class Canvas {
 
   }
 
+  zoom(deltaY: number, pos: Point) {
+    if (deltaY < 0) {
+      this.scale += 0.1
+    } else {
+      this.scale -= 0.1
+    }
+    this.reRender()
+  }
+
   mousePressEvent(ev: MouseEV) {
     const pos = this.transformPos(ev)
+    if (this.outOfPixmap(pos)) return;
     const { nodeName, dataset } = ev.target
+    this.mousePressed = true
     if (ev.button === 1) return;
     if (ev.button === 2) {
       this.continuousMode = !this.continuousMode
       this.line.points.clear()
       this.current = null
       console.log('stop continousMode')
+      return
+    }
+    if (ev.ctrlKey) {
+      this.prevPoint = pos
+      this.prevMovePoint = pos
       return
     }
     if(!this.current && dataset.key) {
@@ -134,8 +188,15 @@ export class Canvas {
   mouseMoveEvent(ev: MouseEV) {
     const pos = this.transformPos(ev)
     this.cursor = pos
+    if (ev.ctrlKey) {
+      if (this.mousePressed) {
+        this.moveLabelImage(pos)
+      }
+      return
+    }
     if (this.drawing()) {
       if (!this.current) return;
+      if (this.outOfPixmap(pos)) return;
       if (['polygon', 'linestrip'].includes(this.createMode)) {
         this.line.points.set(0, this.current.points.last())
         this.line.points.set(1, pos)
@@ -155,6 +216,10 @@ export class Canvas {
     if (this.editing()) {
       this.editShape(pos)
     }
+  }
+
+  mouseUpEvent(ev: MouseEV) {
+    this.mousePressed = false
   }
 
   createShape(pos: Point) {
@@ -198,32 +263,62 @@ export class Canvas {
   moveShape(pos: Point) {
     const offsetX = pos.x - this.prevMovePoint.x
     const offsetY = pos.y - this.prevMovePoint.y
+    let flag = true
+    const newPointList = new List<Point>()
     this.current.points.foreach((i, p) => {
       const newPoint = new Point(p.x + offsetX, p.y + offsetY)
-      this.current.points.set(i, newPoint)
+      newPointList.add(newPoint)
+      if (this.outOfPixmap(newPoint)) {
+        flag = false
+      }
     })
-    this.prevMovePoint = pos
-    this.current.paint(this.canvas)
+    if (!this.outOfPixmap(pos)) {
+      this.prevMovePoint = pos
+    } else {
+      this.mode = 'CREATE'
+      this.selectedDataset = {}
+      this.finalise()
+    }
+    if (flag) {
+      this.current.points.clear()
+      this.current.points.addList(newPointList)
+      this.current.paint(this.canvas, this.originPoint, this.scale)
+    }
   }
 
   editShape(pos: Point) {
+    if (this.outOfPixmap(pos)) return;
     const { index } = this.selectedDataset
     this.current.points.set(index, pos)
-    this.current.paint(this.canvas)
+    this.current.paint(this.canvas, this.originPoint, this.scale)
+  }
+
+  moveLabelImage(pos: Point) {
+    const offsetX = pos.x - this.prevMovePoint.x
+    const offsetY = pos.y - this.prevMovePoint.y
+    const { x, y } = this.originPoint
+    this.originPoint = new Point(x + offsetX, y + offsetY)
+    this.prevMovePoint = pos
+    this.reRender()
   }
 
   transformPos(ev: MouseEV) {
     const { clientX, clientY } = ev
     const x = (clientX - this.offsetLeft) / this.scale
     const y = (clientY - this.offsetTop) / this.scale
-    return new Point(x, y)
+    return new Point(x, y).sub(this.originPoint)
+  }
+
+  outOfPixmap(p: Point) {
+    const pos = p.scale(this.scale)
+    return pos.x < 1 || pos.x > this.pixmapWidth - 1 || pos.y < 1 || pos.y > this.pixmapHeight - 1
   }
 
   finalise() {
     if (this.current) {
       this.current.close()
       this.shapes.set(this.current.colorKey, this.current)
-      this.current.paint(this.canvas)
+      this.current.paint(this.canvas, this.originPoint, this.scale)
     }
     this.line.removeElement()
     this.line.points.clear()
@@ -232,15 +327,24 @@ export class Canvas {
 
   repaint() {
     if(this.createMode === 'polygon') {
-      this.current.paint(this.canvas)
+      this.current.paint(this.canvas, this.originPoint, this.scale)
     }
-    this.line.paint(this.canvas)
+    this.line.paint(this.canvas, this.originPoint, this.scale)
   }
 
   reRender() {
-    console.log('render')
+    if (this.labelImagePath) {
+      if (!this.labelImage) {
+        this.labelImage = this.canvas.image().id('labelimage')
+      }
+      this.labelImage
+        .load(this.labelImagePath)
+        .size(this.pixmapWidth * this.scale, this.pixmapHeight * this.scale)
+        .x(this.originPoint.x * this.scale)
+        .y(this.originPoint.y * this.scale)
+    }
     this.shapes.foreach((k, v) => {
-      v.paint(this.canvas)
+      v.paint(this.canvas, this.originPoint, this.scale)
     })
   }
 }
