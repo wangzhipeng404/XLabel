@@ -10,10 +10,19 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>SVG Marker</title>
     <style>
+      .container {
+        display: flex;
+      }
       #painter {
         width: 500px;
         height: 800px;
         border: 1px solid #f5f5f5;
+      }
+      .doc-wrap {
+        padding-left: 30px;
+      }
+      .doc-wrap li {
+        line-height: 2;
       }
     </style>
   </head>
@@ -21,7 +30,27 @@
     <noscript>
       <strong>We're sorry but DATAPOOLWEB doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="painter"></div>
+    <div class="container">
+      <div id="painter"></div>
+      <div class="doc-wrap">
+        <h4>操作说明</h4>
+        <ul>
+          <li>点击图片空白处可以进行绘制</li>
+          <li>点击图形可以移动图形</li>
+          <li>点击顶点可以编辑图形大小</li>
+          <li>ctrl + 点击图形可以复制图形</li>
+          <li>ctrl + 点击图形空白处可以移动图片</li>
+          <li>ctrl + 鼠标滚动进行放大缩小</li>
+          <li>右键点击可开启/关闭连续绘制</li>
+        </ul>
+        <h4>快捷键</h4>
+        <ul>
+          <li>ctrl + r : 绘制矩形</li>
+          <li>ctrl + c : 绘制圆形</li>
+          <li>ctrl + p : 绘制多边形</li>
+        </ul>
+      </div>
+    </div>
     <!-- built files will be auto injected -->
     <script src="./lib/index.umd.js"></script>
     <script>

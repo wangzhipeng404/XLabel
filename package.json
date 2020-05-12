@@ -1,6 +1,6 @@
 {
   "name": "xtion-label",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Label Marker for AI Learning",
   "main": "lib/index.cjs.js",
   "module": "lib/index.esm.js",
