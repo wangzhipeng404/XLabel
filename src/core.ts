@@ -31,6 +31,7 @@ export class XLabel {
   createMode: ShapeType = 'rectangle'
   mode: 'CREATE'  | 'EDIT' | 'MOVE' = 'CREATE'
   mousePressed: boolean = false
+  copyShape: boolean = false
   current?: Shape = null
   prevPoint?: Point = null
   prevMovePoint?: Point = null
@@ -40,6 +41,7 @@ export class XLabel {
   offsetLeft: number = 0
   offsetTop: number = 0
   originPoint: Point
+  centerPoint: Point
   scale: number = 1
   selectedDataset: Dataset = {}
   labelImagePath?: string = null
@@ -61,6 +63,7 @@ export class XLabel {
     this.offsetTop = $parent.offsetTop
     this.pixmapWidth = this.canvasWidth
     this.pixmapHeight = this.canvasHeight
+    this.centerPoint = new Point(this.canvasWidth, this.canvasHeight).scale(0.5)
     this.canvas.mousedown((e) => this.mousePressEvent(e))
     this.canvas.mousemove((e) => this.mouseMoveEvent(e))
     this.canvas.mouseup(e => this.mouseUpEvent(e))
@@ -91,6 +94,10 @@ export class XLabel {
     return this.mode === 'MOVE'
   }
 
+  copying() {
+    return this.copyShape
+  }
+
   continuous() {
     return this.continuousMode
   }
@@ -116,6 +123,7 @@ export class XLabel {
         this.labelImageHeight = img.height
         this.pixmapWidth = this.canvasWidth
         this.pixmapHeight = this.canvasWidth / img.width * img.height
+        this.centerPoint = new Point(this.pixmapWidth, this.pixmapHeight).scale(0.5)
         this.reRender()
       }
     }
@@ -139,9 +147,13 @@ export class XLabel {
 
   zoom(deltaY: number, pos: Point) {
     if (deltaY < 0) {
+      if (this.scale >= this.config.zoomMax) return;
       this.scale += 0.1
+      this.originPoint = this.centerPoint.scale(1 - this.scale)
     } else {
+      if (this.scale <= this.config.zoomMin) return;
       this.scale -= 0.1
+      this.originPoint = this.centerPoint.scale(1 - this.scale)
     }
     this.reRender()
   }
@@ -159,11 +171,7 @@ export class XLabel {
       console.log('stop continousMode')
       return
     }
-    if (ev.ctrlKey) {
-      this.prevPoint = pos
-      this.prevMovePoint = pos
-      return
-    }
+    // 点击矩形框或点 移动或编辑
     if(!this.current && dataset.key) {
       this.selectedDataset = dataset
       this.current = this.shapes.get(dataset.key)
@@ -173,7 +181,19 @@ export class XLabel {
         this.mode = 'EDIT'
       } else {
         this.mode = 'MOVE'
+        if (ev.ctrlKey) {
+          this.mousePressed = false
+          this.copyShape = true
+          this.current = this.current.copy(getUniqueColorKey(this.shapes))
+          this.current.paint(this.canvas, this.originPoint, this.scale)
+        }
       }
+      return
+    }
+    // 移动背景
+    if (ev.ctrlKey) {
+      this.prevPoint = pos
+      this.prevMovePoint = pos
       return
     }
     if (this.drawing()) {
@@ -191,8 +211,8 @@ export class XLabel {
     if (ev.ctrlKey) {
       if (this.mousePressed) {
         this.moveLabelImage(pos)
+        return
       }
-      return
     }
     if (this.drawing()) {
       if (!this.current) return;
@@ -220,6 +240,12 @@ export class XLabel {
 
   mouseUpEvent(ev: MouseEV) {
     this.mousePressed = false
+    if (this.copying()) {
+      this.mode = 'CREATE'
+      this.copyShape = false
+      this.selectedDataset = {}
+      this.finalise()
+    }
   }
 
   createShape(pos: Point) {
@@ -294,10 +320,8 @@ export class XLabel {
   }
 
   moveLabelImage(pos: Point) {
-    const offsetX = pos.x - this.prevMovePoint.x
-    const offsetY = pos.y - this.prevMovePoint.y
-    const { x, y } = this.originPoint
-    this.originPoint = new Point(x + offsetX, y + offsetY)
+    const offsetPoint = pos.sub(this.prevMovePoint)
+    this.originPoint = this.originPoint.add(offsetPoint)
     this.prevMovePoint = pos
     this.reRender()
   }
@@ -310,7 +334,7 @@ export class XLabel {
   }
 
   outOfPixmap(p: Point) {
-    const pos = p.scale(this.scale)
+    const pos = p
     return pos.x < 1 || pos.x > this.pixmapWidth - 1 || pos.y < 1 || pos.y > this.pixmapHeight - 1
   }
 
