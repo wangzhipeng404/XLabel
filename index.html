@@ -23,6 +23,11 @@
     </noscript>
     <div id="painter"></div>
     <!-- built files will be auto injected -->
-    <script src="./lib/bundle.iife.js"></script>
+    <script src="./lib/index.umd.js"></script>
+    <script>
+      const $parent = document.getElementById('painter')
+      const canvas = new XLabel($parent)
+      canvas.setImg('http://wetwet.cc/db/img/a.1e269410.jpg')
+    </script>
   </body>
 </html>

@@ -1,4 +1,5 @@
 import { SVG, Svg, Dom, Image } from '@svgdotjs/svg.js'
+import { Keyboard, stringifyKey, createShortcuts } from './keyboardManager'
 import defaultConfig from './config/config'
 import { HashTable } from './hashTable'
 import { Shape, ShapeType } from './shape'
@@ -7,7 +8,7 @@ import { List } from './list'
 import { getUniqueColorKey, closeEnough } from './utils'
 import { AnyObject } from './typings'
 
-type Config = typeof defaultConfig
+export type Config = typeof defaultConfig
 
 interface Dataset {
   key?: string
@@ -80,6 +81,7 @@ export class XLabel {
         e.returnValue = false
       }
     }, { passive: false })
+    this.registerShutcuts()
   }
 
   drawing() {
@@ -100,6 +102,31 @@ export class XLabel {
 
   continuous() {
     return this.continuousMode
+  }
+
+  registerShutcuts() {
+    const keyboard = new Keyboard();
+    const shortcutCtrl = stringifyKey("ctrl")
+    const shortcutRectangle = stringifyKey("ctrl", "r")
+    const shortcutCircle = stringifyKey("ctrl", "c")
+    const shortcutpolyon = stringifyKey("ctrl", "p")
+    keyboard.addListener(
+      createShortcuts({
+        [shortcutRectangle]: (e, combo) => {
+          e.preventDefault()
+          this.setCreateMode('rectangle')
+        },
+        [shortcutCircle]: e => {
+          e.preventDefault()
+          this.setCreateMode('circle')
+        },
+        [shortcutpolyon]: e => {
+          e.preventDefault()
+          this.setCreateMode('polygon')
+        },
+      })
+    )
+    window.addEventListener("keydown", keyboard.getHandler(), false)
   }
 
   setContinuousMode(flag: boolean) {

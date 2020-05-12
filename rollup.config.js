@@ -5,6 +5,7 @@ import commonjs from '@rollup/plugin-commonjs'
 import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
 
+const isDev = process.env.NODE_ENV !== 'production'; 
 export default {
   input: "./src/index.ts",
   plugins: [
@@ -15,24 +16,25 @@ export default {
       typescript: require("typescript")
     }),
     sourceMaps(),
-    serve(),
-    livereload()
+    isDev && serve(),
+    isDev && livereload()
   ],
   output: [
     {
       format: "cjs",
-      file: "lib/bundle.cjs.js",
+      file: "lib/index.cjs.js",
       sourcemap: true
     },
     {
       format: "es",
-      file: "lib/bundle.esm.js",
+      file: "lib/index.esm.js",
       sourcemap: true
     },
     {
-      format: "iife",
-      file: "lib/bundle.iife.js",
-      sourcemap: true
+      format: "umd",
+      file: "lib/index.umd.js",
+      sourcemap: true,
+      name: 'XLabel',
     },
   ]
 };
