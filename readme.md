@@ -2,7 +2,7 @@
   a js label marker for machine learning like label me
 
 ### online demo
-[https://wangzhipeng404.github.io/xtion-label/](http://https://wangzhipeng404.github.io/xtion-label/ "https://wangzhipeng404.github.io/xtion-label/")
+[https://wangzhipeng404.github.io/xtion-label/](https://wangzhipeng404.github.io/xtion-label/ "https://wangzhipeng404.github.io/xtion-label/")
 
 ### Getting Start
 in browser
