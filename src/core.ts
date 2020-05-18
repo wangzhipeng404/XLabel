@@ -1,11 +1,11 @@
-import { SVG, Svg, Dom, Image } from '@svgdotjs/svg.js'
+import { SVG, Svg, Dom, Image, Circle, Rect, Polygon, Polyline, Line } from '@svgdotjs/svg.js'
 import { Keyboard, stringifyKey, createShortcuts } from './keyboardManager'
 import defaultConfig from './config/config'
 import { HashTable } from './hashTable'
 import { Shape, ShapeType } from './shape'
 import { Point } from './point'
 import { List } from './list'
-import { getUniqueColorKey, closeEnough } from './utils'
+import { getUniqueColorKey, closeEnough, getDistance } from './utils'
 import { AnyObject } from './typings'
 
 export type Config = typeof defaultConfig
@@ -21,6 +21,8 @@ interface MouseEV extends MouseEvent {
   target: SVGAElement
   dataset: Dataset
 }
+
+type ShapeElement = Rect | Circle | Polygon | Polyline | Line
 
 export class XLabel {
   private canvas: Svg
@@ -51,6 +53,8 @@ export class XLabel {
   labelImageHeight: number = 0
   pixmapWidth: number = 0
   pixmapHeight: number = 0
+  elements: HashTable<ShapeElement> = new HashTable<ShapeElement>()
+  vertexs: HashTable<Circle[]> = new HashTable<Circle[]>()
 
   constructor($parent: HTMLElement = document.body, conf: Partial<Config> = {}) {
     this.config = { ...defaultConfig, ...conf }
@@ -134,8 +138,9 @@ export class XLabel {
   }
 
   setImg(path: string) {
+    if (!path) return;
+    this.clean()
     this.labelImagePath = path
-    this.shapes = new HashTable<Shape>()
     const img = document.createElement('img')
     img.src = path
     if(img.complete){
@@ -200,6 +205,7 @@ export class XLabel {
     }
     // 点击矩形框或点 移动或编辑
     if(!this.current && dataset.key) {
+      console.log(ev)
       this.selectedDataset = dataset
       this.current = this.shapes.get(dataset.key)
       this.prevPoint = pos
@@ -209,10 +215,11 @@ export class XLabel {
       } else {
         this.mode = 'MOVE'
         if (ev.ctrlKey) {
+          console.log('copy')
           this.mousePressed = false
           this.copyShape = true
           this.current = this.current.copy(getUniqueColorKey(this.shapes))
-          this.current.paint(this.canvas, this.originPoint, this.scale)
+          this.paint(this.current)
         }
       }
       return
@@ -335,7 +342,7 @@ export class XLabel {
     if (flag) {
       this.current.points.clear()
       this.current.points.addList(newPointList)
-      this.current.paint(this.canvas, this.originPoint, this.scale)
+      this.paint(this.current)
     }
   }
 
@@ -343,7 +350,7 @@ export class XLabel {
     if (this.outOfPixmap(pos)) return;
     const { index } = this.selectedDataset
     this.current.points.set(index, pos)
-    this.current.paint(this.canvas, this.originPoint, this.scale)
+    this.paint(this.current)
   }
 
   moveLabelImage(pos: Point) {
@@ -368,19 +375,24 @@ export class XLabel {
   finalise() {
     if (this.current) {
       this.current.close()
+      if (this.current.shapeType === 'polygon') {
+        this.removeElement(this.current)
+      }
       this.shapes.set(this.current.colorKey, this.current)
-      this.current.paint(this.canvas, this.originPoint, this.scale)
+      this.paint(this.current)
     }
-    this.line.removeElement()
+    this.removeElement(this.line)
     this.line.points.clear()
+
     this.current = null
+    console.log('finalise')
   }
 
   repaint() {
     if(this.createMode === 'polygon') {
-      this.current.paint(this.canvas, this.originPoint, this.scale)
+      this.paint(this.current)
     }
-    this.line.paint(this.canvas, this.originPoint, this.scale)
+    this.paint(this.line)
   }
 
   reRender() {
@@ -395,7 +407,143 @@ export class XLabel {
         .y(this.originPoint.y * this.scale)
     }
     this.shapes.foreach((k, v) => {
-      v.paint(this.canvas, this.originPoint, this.scale)
+      this.paint(v)
     })
+  }
+
+  paint(shape: Shape) {
+    if (shape.points.length() > 1) {
+      if (shape.shapeType === 'rectangle') {
+        this.drawReact(shape)
+      }
+      if (shape.shapeType === 'circle') {
+        this.drawCircle(shape)
+      }
+      if (shape.shapeType === 'polygon' || shape.shapeType === 'linestrip') {
+        this.drawPolygon(shape)
+      }
+      if (shape.shapeType === 'line') {
+        this.drawLine(shape)
+      }
+      
+    }
+    shape.points.foreach((i, p) => {
+      this.drawPoint(shape, i)
+    })
+  }
+
+  drawPoint(shape: Shape, index: number) {
+    const vts = this.vertexs.get(shape.colorKey) || []
+    if (!vts[index]) {
+      vts[index] = this.canvas.circle()
+      this.vertexs.set(shape.colorKey, vts)
+    }
+    const p = shape.points.get(index).add(this.originPoint).scale(this.scale)
+    vts[index].size(6).attr({
+      cx: p.x,
+      cy: p.y,
+      fill: `rgba(${shape.rgb.join(',')}, 1)`,
+      'data-key': shape.colorKey,
+      'data-type': 'vertex',
+      'data-index': index,
+    })
+  }
+
+  drawLine(shape: Shape) {
+    let el = this.elements.get(shape.colorKey)
+    if (!el) {
+      el = this.canvas.line()
+      this.elements.set(shape.colorKey, el)
+    }
+    const points = []
+    shape.points.foreach((i, p) => {
+      const pos = p.add(this.originPoint).scale(this.scale)
+      points.push(`${pos.x},${pos.y}`)
+    });
+    (<Line>el).plot(points.join(',')).attr({
+      stroke: shape.lineColor,
+      'stroke-width': 1,
+      fill: 'none',
+      'data-key': shape.colorKey,
+    }).plot()
+  }
+
+  drawReact(shape: Shape) {
+    let el = this.elements.get(shape.colorKey)
+    if(!el) {
+      el = this.canvas.rect()
+      this.elements.set(shape.colorKey, el)
+    }
+    const p0 = shape.points.get(0).add(this.originPoint).scale(this.scale)
+    const p1 = shape.points.get(1).add(this.originPoint).scale(this.scale)
+    const x = (p0.x < p1.x ? p0.x : p1.x)
+    const y = (p0.y < p1.y ? p0.y : p1.y)
+    ;(<Rect>el)
+      .width(Math.abs(p1.x - p0.x))
+      .height(Math.abs(p1.y - p0.y))
+      .attr({
+        x,
+        y,
+        stroke: shape.lineColor,
+        'stroke-width': 1,
+        fill: `rgba(${shape.rgb.join(',')}, 0.1)`,
+      'data-key': shape.colorKey,
+      })
+  }
+
+  drawCircle(shape: Shape) {
+    let el = this.elements.get(shape.colorKey)
+    if (!el) {
+      el = this.canvas.circle()
+      this.elements.set(shape.colorKey, el)
+    }
+    const p0 = shape.points.get(0).add(this.originPoint).scale(this.scale)
+    const p1 = shape.points.get(1).add(this.originPoint).scale(this.scale)
+    const d = getDistance(p1, p0)
+    ;(<Circle>el).size(d).attr({
+      cx: (p0.x + p1.x) / 2,
+      cy: (p0.y + p1.y) / 2,
+      stroke: shape.lineColor,
+      'stroke-width': 1,
+      fill: `rgba(${shape.rgb.join(',')}, 0.1)`,
+      'data-key': shape.colorKey,
+    })
+  }
+
+  drawPolygon(shape: Shape) {
+    let el = this.elements.get(shape.colorKey)
+    if (!el) {
+      el = shape.isClose() ? this.canvas.polygon() : this.canvas.polyline()
+      this.elements.set(shape.colorKey, el)
+    }
+    const points = []
+    shape.points.foreach((i, p) => {
+      const pos = p.add(this.originPoint).scale(this.scale)
+      points.push(`${pos.x},${pos.y}`)
+    })
+    ;(<Polygon | Polyline>el).plot(points.join(' '))
+    ;(<Polygon | Polyline>el).attr({
+      stroke: shape.lineColor,
+      'stroke-width': 1,
+      fill: `rgba(${shape.rgb.join(',')}, 0.1)`,
+      'data-key': shape.colorKey,
+    })
+  }
+
+  removeElement(shape: Shape) {
+    this.elements.get(shape.colorKey)?.remove()
+    this.vertexs.get(shape.colorKey)?.forEach(el => {
+      el.remove()
+    })
+    this.elements.del(shape.colorKey)
+    this.vertexs.del(shape.colorKey)
+  }
+
+  clean () {
+    this.labelImage = null
+    this.shapes = new HashTable<Shape>()
+    this.elements = new HashTable<ShapeElement>()
+    this.vertexs = new HashTable<Circle[]>()
+    this.canvas.clear()
   }
 }
