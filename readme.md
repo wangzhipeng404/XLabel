@@ -37,9 +37,9 @@ xlabel.getData()
 ### Shutcouts
 |shortut|Description|
 | ------ | ------ |
-|ctrl + r| draw reactangle|
-|ctrl + c| draw circle|
-|ctrl + p| draw polyon|
+|ctrl + f| draw reactangle|
+|ctrl + g| draw polyon|
+|ctrl + h| draw circle|
 |ctrl + wheel| zoom change|
 |ctrl + leftClick| copy shape or move img|
 
