@@ -2,23 +2,23 @@
  * Source: https://github.com/madrobby/keymaster/blob/3b1f2afabf1569848dea8b697ac418f19b601a30/keymaster.js
  */
 export const KEY_MAP: { [code: string]: string } = {
-  "⇧": "shift",
-  "⌥": "alt",
-  option: "alt",
-  "⌃": "control",
-  ctrl: "control",
-  "⌘": "meta",
-  cmd: "meta",
-  command: "meta",
-  caps: "capslock",
-  tab: "tab",
-  return: "enter",
-  esc: "escape",
-  space: " ",
-  left: "arrowleft",
-  up: "arrowup",
-  right: "arrowright",
-  down: "arrowdown"
+  '⇧': 'shift',
+  '⌥': 'alt',
+  option: 'alt',
+  '⌃': 'control',
+  ctrl: 'control',
+  '⌘': 'meta',
+  cmd: 'meta',
+  command: 'meta',
+  caps: 'capslock',
+  tab: 'tab',
+  return: 'enter',
+  esc: 'escape',
+  space: ' ',
+  left: 'arrowleft',
+  up: 'arrowup',
+  right: 'arrowright',
+  down: 'arrowdown',
 };
 
 /**
@@ -32,14 +32,12 @@ export const SHOULD_PROPAGATE = true;
 export function keyboardEventCombo(e: KeyboardEvent) {
   const keys = new Set<string>([e.key.toLocaleLowerCase()]);
 
-  if (e.shiftKey) keys.add("shift");
-  if (e.ctrlKey) keys.add("control");
-  if (e.altKey) keys.add("alt");
-  if (e.metaKey) keys.add("meta");
+  if (e.shiftKey) keys.add('shift');
+  if (e.ctrlKey) keys.add('control');
+  if (e.altKey) keys.add('alt');
+  if (e.metaKey) keys.add('meta');
 
-  return Array.from(keys)
-    .sort()
-    .join(" ");
+  return Array.from(keys).sort().join(' ');
 }
 
 /**
@@ -47,10 +45,10 @@ export function keyboardEventCombo(e: KeyboardEvent) {
  */
 export function stringifyKey(...keys: (string | number)[]) {
   return keys
-    .map(key => String(key).toLowerCase())
-    .map(key => (KEY_MAP.hasOwnProperty(key) ? KEY_MAP[key] : key))
+    .map((key) => String(key).toLowerCase())
+    .map((key) => (KEY_MAP.hasOwnProperty(key) ? KEY_MAP[key] : key))
     .sort()
-    .join(" ");
+    .join(' ');
 }
 
 /**
@@ -68,10 +66,7 @@ export interface Shortcuts {
 /**
  * Create a listener function from shortcuts.
  */
-export function createShortcuts(
-  shortcuts: Shortcuts,
-  returnValue = SHOULD_PROPAGATE
-): KeyHandler {
+export function createShortcuts(shortcuts: Shortcuts, returnValue = SHOULD_PROPAGATE): KeyHandler {
   return (event, combo) => {
     return shortcuts[combo] ? shortcuts[combo](event, combo) : returnValue;
   };
@@ -84,9 +79,9 @@ export function isInputEvent(event: KeyboardEvent) {
   const target = event.target as HTMLElement;
 
   return (
-    target.tagName === "INPUT" ||
-    target.tagName === "SELECT" ||
-    target.tagName === "TEXTAREA" ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'SELECT' ||
+    target.tagName === 'TEXTAREA' ||
     target.isContentEditable
   );
 }
@@ -127,10 +122,12 @@ export class Keyboard {
     return (event, combo) => {
       let len = this.listeners.length;
 
+      // eslint-disable-next-line no-plusplus
       while (len--) {
         if (this.listeners[len](event, combo) !== SHOULD_PROPAGATE) return;
       }
 
+      // eslint-disable-next-line consistent-return
       return returnValue;
     };
   }

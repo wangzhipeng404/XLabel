@@ -1,3 +1,3 @@
-import { XLabel } from './core'
+import { XLabel } from './core';
 
-export default XLabel
+export default XLabel;

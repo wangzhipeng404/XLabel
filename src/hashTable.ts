@@ -1,7 +1,14 @@
-class HashValue<T>{
+/* eslint-disable */
+
+class HashValue<T> {
   key: string;
   value: T;
   index: number;
+  constructor(key: string, value: T, index: number) {
+    this.key = key;
+    this.value = value;
+    this.index = index;
+  }
 }
 
 export class HashTable<T> {
@@ -13,14 +20,11 @@ export class HashTable<T> {
   }
 
   set(key: string, value: T): void {
-    var vl = new HashValue<T>();
-    vl.key = key;
-    vl.value = value;
-    var index = this.itemList.length;
+    let index = this.itemList.length;
     if (this.has(key)) {
       index = this.items[key].index;
     }
-    vl.index = index;
+    let vl = new HashValue<T>(key, value, index);
     this.itemList[index] = value;
     this.items[key] = vl;
   }
@@ -37,7 +41,6 @@ export class HashTable<T> {
   }
 
   resetIndex(): void {
-
     this.foreach((k, v: T) => {
       var index = this.itemList.indexOf(v);
       this.items[k].index = index;
@@ -48,11 +51,11 @@ export class HashTable<T> {
     return key in this.items;
   }
 
-  get(key: string): T {
+  get(key: string): T | undefined {
     if (this.has(key)) {
       return this.items[key].value;
     }
-    return null;
+    return undefined;
   }
 
   count(): number {
@@ -83,19 +86,17 @@ export class HashTable<T> {
   }
 
   //获取index
-  indexOf(key) {
+  indexOf(key: string) {
     if (this.has(key)) {
       return this.items[key].index;
     }
+    return -1;
   }
 
   //插入
   insertAt(index: number, value: T, key: string) {
     this.itemList.splice(index, 0, value);
-    var hashV = new HashValue<T>();
-    hashV.index = index;
-    hashV.key = key;
-    hashV.value = value;
+    let hashV = new HashValue<T>(key, value, index);
     this.items[key] = hashV;
     this.resetIndex();
   }
