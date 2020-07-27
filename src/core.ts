@@ -232,34 +232,41 @@ export class XLabel {
       createShortcuts({
         [shortcutRectangle]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.setCreateMode('rectangle');
           this.onChange('createMode');
         },
         [shortcutCircle]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.setCreateMode('circle');
           this.onChange('createMode');
         },
         [shortcutpolyon]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.setCreateMode('polygon');
           this.setContinuousMode(false);
           this.onChange('createMode');
         },
         [shortcutContinuous]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.continuousMode = !this.continuousMode;
         },
         [shortcutZoomIn]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.zoom(-1);
         },
         [shortcutZoomOut]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.zoom(1);
         },
         [shortcutDel]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           const keys: string[] = [];
           this.shapes.foreach((key, shape) => {
             if (shape.active) {
@@ -270,36 +277,43 @@ export class XLabel {
         },
         [shortcutUndo]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.undo();
         },
         [shortcutEdit]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.onChange('editActive');
         },
         [shortcutUnselectAll]: (e) => {
           e.preventDefault();
+          if (this.current) return;
           this.setActiveShapes([]);
         },
         [shortcutUp]: filterInputEvent((e) => {
           e.preventDefault();
+          if (this.current) return;
           this.originOffset = this.originOffset.add(new Point(0, 10));
           this.originPoint = this.originPoint.add(new Point(0, 10));
           this.reRender();
         }),
         [shortcutDown]: filterInputEvent((e) => {
           e.preventDefault();
+          if (this.current) return;
           this.originOffset = this.originOffset.add(new Point(0, -10));
           this.originPoint = this.originPoint.add(new Point(0, -10));
           this.reRender();
         }),
         [shortcutLeft]: filterInputEvent((e) => {
           e.preventDefault();
+          if (this.current) return;
           this.originOffset = this.originOffset.add(new Point(10, 0));
           this.originPoint = this.originPoint.add(new Point(10, 0));
           this.reRender();
         }),
         [shortcutRight]: filterInputEvent((e) => {
           e.preventDefault();
+          if (this.current) return;
           this.originOffset = this.originOffset.add(new Point(-10, 0));
           this.originPoint = this.originPoint.add(new Point(-10, 0));
           this.reRender();
@@ -404,6 +418,7 @@ export class XLabel {
   }
 
   zoom(deltaY: number) {
+    if (this.current) return;
     if (deltaY < 0) {
       if (this.scale >= this.config.zoomMax) return;
       this.scale += 0.1;
@@ -440,7 +455,7 @@ export class XLabel {
     if (ev.button === 2) {
       // this.continuousMode = false;
       this.line.points.clear();
-      if (this.createMode === 'polygon' && this.current) {
+      if (this.drawing() && this.createMode === 'polygon' && this.current) {
         this.removeElement(this.current);
       }
       this.current = undefined;
@@ -564,10 +579,10 @@ export class XLabel {
   }
 
   createShape(pos: Point) {
-    /* if (!this.labelInfo.labelName) {
+    if (!this.labelInfo.labelName) {
       this.onError('请选择一个标签');
       return;
-    } */
+    }
     if (this.current) {
       // 如果有当前图形则处理当前图形
       const tooClose = closeEnough(pos, this.current.points.get(0), 10);
@@ -655,6 +670,7 @@ export class XLabel {
   }
 
   moveLabelImage(pos: Point) {
+    if (this.current) return;
     const offsetPoint = pos.sub(this.prevMovePoint).unScale(this.scale);
     this.originOffset = this.originOffset.add(offsetPoint);
     this.originPoint = this.originPoint.add(offsetPoint);
@@ -877,11 +893,9 @@ export class XLabel {
         this.drawLine(shape);
       }
     }
-    if (this.config.editable) {
-      shape.points.foreach((i) => {
-        this.drawVertex(shape, i);
-      });
-    }
+    shape.points.foreach((i) => {
+      this.drawVertex(shape, i);
+    });
   }
 
   drawVertex(shape: Shape, index: number) {
