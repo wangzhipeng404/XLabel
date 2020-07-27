@@ -911,7 +911,7 @@ export class XLabel {
     }
     const p = shape.points.get(index).add(this.originPoint).scale(this.scale);
     const color = this.labelColor.get(`${shape.labelId}`);
-    vts[index].size(10).attr({
+    vts[index].size(this.config.vertexSize).attr({
       cx: p.x,
       cy: p.y,
       fill: shape.active ? this.config.activeColor : color?.hex || this.config.lineColor,

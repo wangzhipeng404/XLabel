@@ -14,6 +14,7 @@ export interface Config {
   zoomMin: number;
   lineColor: string;
   lineWidth: number;
+  vertexSize: number;
   fillColor: number[];
   fillOpacity: number;
   activeColor: string;
@@ -28,6 +29,7 @@ const config: Config = {
   zoomMin: 0.5,
   lineColor: `#00FF00`,
   lineWidth: 1,
+  vertexSize: 8,
   fillColor: [0, 255, 0],
   fillOpacity: 0.1,
   activeColor: '#a8071a',
