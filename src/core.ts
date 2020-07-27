@@ -461,7 +461,7 @@ export class XLabel {
         this.mode = 'SELECT';
         if (ev.ctrlKey) {
           this.mode = 'COPY';
-          this.current = this.current?.copy(getUniqueColorKey(this.shapes), true);
+          this.current = this.current?.copy(getUniqueColorKey(this.shapes), true, this.scale);
           this.logType = 'ADD';
           if (this.current) {
             this.paint(this.current);

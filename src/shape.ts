@@ -78,7 +78,7 @@ export class Shape {
     } */
   }
 
-  copy(colorKey: string, omitId: boolean = false) {
+  copy(colorKey: string, omitId: boolean = false, scale: number = 1) {
     const copyed = new Shape(colorKey, this.shapeType, this.otherData);
     copyed.active = this.active;
     copyed._close = this._close;
