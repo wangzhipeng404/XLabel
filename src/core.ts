@@ -520,7 +520,8 @@ export class XLabel {
 
   mousedoubleClick() {
     if (this.current && this.drawing() && this.createMode === 'polygon') {
-      if (this.current.points.length() > 2) {
+      if (this.current.points.length() > 4) {
+        this.current.points.removeMany(this.current.points.length() - 2, 2);
         this.finalise();
       }
     }
@@ -550,7 +551,7 @@ export class XLabel {
       }
       return;
     }
-    if (this.selecting() || this.draging()) {
+    if (this.selecting() || this.draging() || this.editing()) {
       this.finalise();
       this.mode = 'CREATE';
       this.logType = 'ADD';
@@ -876,9 +877,11 @@ export class XLabel {
         this.drawLine(shape);
       }
     }
-    shape.points.foreach((i) => {
-      this.drawVertex(shape, i);
-    });
+    if (this.config.editable) {
+      shape.points.foreach((i) => {
+        this.drawVertex(shape, i);
+      });
+    }
   }
 
   drawVertex(shape: Shape, index: number) {
