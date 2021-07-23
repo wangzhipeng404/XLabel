@@ -329,6 +329,15 @@ export class XLabel {
     this.continuousMode = flag;
   }
 
+  setColors(colorMap: { [key: string]: string}) {
+    Object.keys(colorMap).forEach(key => {
+      this.colors.set(colorMap[key], key);
+      const rgb = hexToRgbA(colorMap[key]);
+      this.labelColor.set(`${key}`, { hex: colorMap[key], rgb });
+    })
+    this.reRender()
+  }
+
   setLabelInfo(labelInfo: AnyObject) {
     this.labelInfo = labelInfo;
     this.line.setOtherData(labelInfo);
